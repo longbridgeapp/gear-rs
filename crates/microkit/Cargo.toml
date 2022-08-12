@@ -1,0 +1,18 @@
+[package]
+name = "gear-microkit"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+num_enum = "0.5.7"
+once_cell = "1.13.0"
+opentelemetry = "0.17.0"
+opentelemetry-http = "0.6.0"
+opentelemetry-jaeger = { version = "0.16.0", features = [
+    "rt-tokio",
+    "collector_client",
+] }
+opentelemetry-semantic-conventions = "0.9.0"
+poem = { version = "1.3.37", features = ["opentelemetry", "prometheus"] }
+poem-grpc = { version = "0.2.1", features = ["json-codec"] }
+tokio = { version = "1.20.1", features = ["rt"] }

@@ -1,0 +1,2 @@
+[workspace]
+members = ["crates/microkit", "crates/codegen", "examples/helloworld"]
