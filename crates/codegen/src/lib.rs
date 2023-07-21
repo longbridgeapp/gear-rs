@@ -23,6 +23,7 @@ pub fn build() -> Result<(), Box<dyn Error>> {
         .type_attribute(".", "#[derive(serde::Deserialize, serde::Serialize)]")
         .client_middleware("gear_microkit::middlewares::AddClientHeaders")
         .client_middleware("gear_microkit::middlewares::ClientTracing")
+        .protoc_arg("--experimental_allow_proto3_optional")
         .compile(&protos, &["./proto"])?;
     Ok(())
 }
