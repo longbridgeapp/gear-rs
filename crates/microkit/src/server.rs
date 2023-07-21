@@ -36,8 +36,9 @@ impl GrpcServer {
     /// Start the server
     pub async fn start(self) -> io::Result<()> {
         global::set_text_map_propagator(TraceContextPropagator::new());
-        let tracer = opentelemetry_jaeger::new_pipeline()
-            .install_simple()
+        let tracer = opentelemetry_jaeger::new_collector_pipeline()
+            .with_hyper()
+            .install_batch(opentelemetry::runtime::Tokio)
             .unwrap();
 
         let prometheus_exporter_server = Server::new(TcpListener::bind("0.0.0.0:9102"))
