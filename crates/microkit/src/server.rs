@@ -36,8 +36,7 @@ impl GrpcServer {
     /// Start the server
     pub async fn start(self) -> io::Result<()> {
         global::set_text_map_propagator(TraceContextPropagator::new());
-        let tracer = opentelemetry_jaeger::new_collector_pipeline()
-            .with_hyper()
+        let tracer = opentelemetry_jaeger::new_agent_pipeline()
             .install_batch(opentelemetry::runtime::Tokio)
             .unwrap();
 
