@@ -14,6 +14,6 @@ opentelemetry-jaeger = { version = "0.18.0", features = [
     "hyper_collector_client",
 ] }
 opentelemetry-semantic-conventions = "0.11.0"
-poem = { version = "1.3.37", features = ["opentelemetry", "prometheus"] }
-poem-grpc = { version = "0.2.1", features = ["json-codec"] }
+poem = { version = "1.3.57", features = ["opentelemetry", "prometheus"] }
+poem-grpc = { version = "0.2.22", features = ["json-codec"] }
 tokio = { version = "1.20.1", features = ["rt"] }
