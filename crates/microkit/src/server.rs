@@ -5,7 +5,7 @@ use poem::{
     endpoint::{BoxEndpoint, PrometheusExporter},
     get,
     listener::TcpListener,
-    middleware::{OpenTelemetryMetrics, OpenTelemetryTracing},
+    middleware::{OpenTelemetryMetrics, OpenTelemetryTracing, TokioMetrics},
     EndpointExt, IntoEndpoint, Response, Server,
 };
 use poem_grpc::{RouteGrpc, Service};
@@ -46,13 +46,17 @@ impl GrpcServer {
         let grpc_server = Server::new(TcpListener::bind(
             std::env::var("MICRO_SERVER_ADDRESS").unwrap_or_else(|_| "0.0.0.0:8080".to_string()),
         ))
-        .run(
+        .run({
             self.router
                 .data(tracer.clone())
                 .with(OpenTelemetryTracing::new(tracer))
                 .with(OpenTelemetryMetrics::new())
-                .with(SetCurrentService),
-        );
+                .with(SetCurrentService)
+                .with_if(
+                    std::env::var("GEAR_ENABLE_TOKIO_METRICS").as_deref() == Ok("1"),
+                    TokioMetrics::new(),
+                )
+        });
 
         tokio::try_join!(prometheus_exporter_server, grpc_server).map(|_| ())
     }
