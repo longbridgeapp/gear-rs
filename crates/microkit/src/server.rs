@@ -2,8 +2,7 @@ use std::io;
 
 use opentelemetry::{global, sdk::propagation::TraceContextPropagator};
 use poem::{
-    endpoint::{BoxEndpoint, PrometheusExporter},
-    get,
+    endpoint::BoxEndpoint,
     listener::TcpListener,
     middleware::{OpenTelemetryMetrics, OpenTelemetryTracing, TokioMetrics},
     EndpointExt, IntoEndpoint, Response, Server,
@@ -36,13 +35,10 @@ impl GrpcServer {
     /// Start the server
     pub async fn start(self) -> io::Result<()> {
         global::set_text_map_propagator(TraceContextPropagator::new());
-        let tracer = opentelemetry_jaeger::new_agent_pipeline()
+        let tracer = opentelemetry_jaeger::new_collector_pipeline()
+            .with_hyper()
             .install_batch(opentelemetry::runtime::Tokio)
             .unwrap();
-
-        let prometheus_exporter_server = Server::new(TcpListener::bind("0.0.0.0:9102"))
-            .run(poem::Route::new().at("/metrics", get(PrometheusExporter::new())));
-
         let grpc_server = Server::new(TcpListener::bind(
             std::env::var("MICRO_SERVER_ADDRESS").unwrap_or_else(|_| "0.0.0.0:8080".to_string()),
         ))
@@ -58,6 +54,6 @@ impl GrpcServer {
                 )
         });
 
-        tokio::try_join!(prometheus_exporter_server, grpc_server).map(|_| ())
+        tokio::try_join!(grpc_server).map(|_| ())
     }
 }

@@ -33,7 +33,7 @@ impl<E: Endpoint> Endpoint for ClientTracingEndpoint<E> {
                     .span_builder("grpc request")
                     .with_kind(SpanKind::Client)
                     .start(tracer);
-                span.set_attribute(trace::HTTP_TARGET.string(req.uri().path().to_string()));
+                span.set_attribute(trace::URL_FULL.string(req.uri().path().to_string()));
 
                 let cx = Context::current_with_span(span);
                 global::get_text_map_propagator(|propagator| {
