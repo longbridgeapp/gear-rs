@@ -1,6 +1,7 @@
 use std::io;
 
-use opentelemetry::{global, sdk::propagation::TraceContextPropagator};
+use opentelemetry::global;
+use opentelemetry_sdk::propagation::TraceContextPropagator;
 use poem::{
     endpoint::BoxEndpoint,
     listener::TcpListener,
@@ -37,7 +38,7 @@ impl GrpcServer {
         global::set_text_map_propagator(TraceContextPropagator::new());
         let tracer = opentelemetry_jaeger::new_collector_pipeline()
             .with_hyper()
-            .install_batch(opentelemetry::runtime::Tokio)
+            .install_batch(opentelemetry_sdk::runtime::Tokio)
             .unwrap();
         let grpc_server = Server::new(TcpListener::bind(
             std::env::var("MICRO_SERVER_ADDRESS").unwrap_or_else(|_| "0.0.0.0:8080".to_string()),

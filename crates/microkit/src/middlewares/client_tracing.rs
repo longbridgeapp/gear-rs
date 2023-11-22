@@ -1,10 +1,10 @@
 use opentelemetry::{
     global,
-    sdk::trace::Tracer,
     trace::{FutureExt, Span, SpanKind, TraceContextExt, Tracer as _},
     Context,
 };
 use opentelemetry_http::HeaderInjector;
+use opentelemetry_sdk::trace::Tracer;
 use opentelemetry_semantic_conventions::trace;
 use poem::{Endpoint, Middleware, Request, Result};
 
