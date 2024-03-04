@@ -1,6 +1,6 @@
 use poem::{http::HeaderValue, Endpoint, Middleware, Request, Result};
 
-use crate::middlewares::set_current_service::current_service_name;
+use crate::middlewares::CurrentServiceName;
 
 pub struct AddClientHeaders;
 
@@ -29,9 +29,12 @@ impl<E: Endpoint> Endpoint for AddClientHeadersEndpoint<E> {
         }
 
         // x-micro-from-service
-        if let Ok(from_service) = HeaderValue::from_maybe_shared(current_service_name()) {
+        if let Some(service_name) = req
+            .data::<CurrentServiceName>()
+            .and_then(|service_name| service_name.0.parse().ok())
+        {
             req.headers_mut()
-                .insert("x-micro-from-service", from_service);
+                .insert("x-micro-from-service", service_name);
         }
 
         self.inner.call(req).await

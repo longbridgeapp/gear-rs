@@ -12,13 +12,7 @@ impl<E: Endpoint> Middleware<E> for SetCurrentService {
     }
 }
 
-tokio::task_local! {
-    static SERVICE_NAME: String;
-}
-
-pub(crate) fn current_service_name() -> String {
-    SERVICE_NAME.with(|service_name| service_name.clone())
-}
+pub(crate) struct CurrentServiceName(pub(crate) String);
 
 pub(crate) struct SetCurrentServiceEndpoint<E> {
     inner: E,
@@ -28,14 +22,11 @@ pub(crate) struct SetCurrentServiceEndpoint<E> {
 impl<E: Endpoint> Endpoint for SetCurrentServiceEndpoint<E> {
     type Output = E::Output;
 
-    async fn call(&self, req: Request) -> Result<Self::Output> {
+    async fn call(&self, mut req: Request) -> Result<Self::Output> {
         // x-micro-service
         if let Some(service) = req.uri().path().split('/').rev().nth(1) {
-            SERVICE_NAME
-                .scope(service.to_string(), self.inner.call(req))
-                .await
-        } else {
-            self.inner.call(req).await
+            req.set_data(CurrentServiceName(service.to_string()));
         }
+        self.inner.call(req).await
     }
 }
