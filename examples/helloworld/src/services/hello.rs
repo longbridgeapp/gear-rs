@@ -6,7 +6,6 @@ poem_grpc::include_proto!("hello");
 #[derive(Debug, Clone)]
 pub(crate) struct HelloWorldService;
 
-#[poem::async_trait]
 impl Helloworld for HelloWorldService {
     async fn say_hello(&self, req: Request<HelloRequest>) -> Result<Response<HelloReply>, Status> {
         let message = match req.member_id() {

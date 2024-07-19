@@ -1,6 +1,6 @@
 use std::io;
 
-use opentelemetry::global;
+use opentelemetry::{global, trace::TracerProvider as _};
 use opentelemetry_sdk::propagation::TraceContextPropagator;
 use poem::{
     endpoint::BoxEndpoint,
@@ -36,13 +36,16 @@ impl GrpcServer {
     /// Start the server
     pub async fn start(self) -> io::Result<()> {
         global::set_text_map_propagator(TraceContextPropagator::new());
-        let tracer = opentelemetry_jaeger::new_collector_pipeline()
-            .with_hyper()
+        let tracer_provider = opentelemetry_otlp::new_pipeline()
+            .tracing()
+            .with_exporter(opentelemetry_otlp::new_exporter().tonic())
             .install_batch(opentelemetry_sdk::runtime::Tokio)
-            .unwrap();
+            .expect("Trace Pipeline should initialize.");
+        let tracer = tracer_provider.tracer("gear-rs");
         let grpc_server = Server::new(TcpListener::bind(
             std::env::var("MICRO_SERVER_ADDRESS").unwrap_or_else(|_| "0.0.0.0:8080".to_string()),
         ))
+        .http2_max_concurrent_streams(None)
         .run({
             self.router
                 .data(tracer.clone())

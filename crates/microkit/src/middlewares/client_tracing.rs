@@ -1,7 +1,7 @@
 use opentelemetry::{
     global,
     trace::{FutureExt, Span, SpanKind, TraceContextExt, Tracer as _},
-    Context,
+    Context, KeyValue,
 };
 use opentelemetry_http::HeaderInjector;
 use opentelemetry_sdk::trace::Tracer;
@@ -22,7 +22,6 @@ pub struct ClientTracingEndpoint<E> {
     inner: E,
 }
 
-#[poem::async_trait]
 impl<E: Endpoint> Endpoint for ClientTracingEndpoint<E> {
     type Output = E::Output;
 
@@ -33,7 +32,7 @@ impl<E: Endpoint> Endpoint for ClientTracingEndpoint<E> {
                     .span_builder("grpc request")
                     .with_kind(SpanKind::Client)
                     .start(tracer);
-                span.set_attribute(trace::URL_FULL.string(req.uri().path().to_string()));
+                span.set_attribute(KeyValue::new(trace::URL_FULL, req.uri().path().to_string()));
 
                 let cx = Context::current_with_span(span);
                 global::get_text_map_propagator(|propagator| {

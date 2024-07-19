@@ -16,7 +16,6 @@ pub struct AddClientHeadersEndpoint<E> {
     inner: E,
 }
 
-#[poem::async_trait]
 impl<E: Endpoint> Endpoint for AddClientHeadersEndpoint<E> {
     type Output = E::Output;
 
