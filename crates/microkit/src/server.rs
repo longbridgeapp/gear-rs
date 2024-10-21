@@ -36,35 +36,40 @@ impl GrpcServer {
     /// Start the server with the middleware
     pub async fn start_with_middleware<T>(self, middleware: T) -> io::Result<()>
     where
-        T: Middleware<poem::Route> + 'static,
+        T: Middleware<BoxEndpoint<'static, Response>> + 'static,
     {
         global::set_text_map_propagator(TraceContextPropagator::new());
-
-        let grpc_server = Server::new(TcpListener::bind(
-            std::env::var("MICRO_SERVER_ADDRESS").unwrap_or_else(|_| "0.0.0.0:8080".to_string()),
-        ))
-        .http2_max_concurrent_streams(None)
-        .run(self.router.with(middleware));
-        tokio::try_join!(grpc_server).map(|_| ())
-    }
-
-    /// Start the server
-    pub async fn start(self) -> io::Result<()> {
         let tracer_provider = opentelemetry_otlp::new_pipeline()
             .tracing()
             .with_exporter(opentelemetry_otlp::new_exporter().tonic())
             .install_batch(opentelemetry_sdk::runtime::Tokio)
             .expect("Trace Pipeline should initialize.");
         let tracer = tracer_provider.tracer("gear-rs");
+        let app = self
+            .router
+            .with(
+                AddData::new(tracer.clone())
+                    .combine(OpenTelemetryTracing::new(tracer))
+                    .combine(OpenTelemetryMetrics::new())
+                    .combine(SetCurrentService)
+                    .combine_if(
+                        std::env::var("GEAR_ENABLE_TOKIO_METRICS").as_deref() == Ok("1"),
+                        TokioMetrics::new(),
+                    ),
+            )
+            .boxed();
+        let app = app.with(middleware);
 
-        let middleware = AddData::new(tracer.clone())
-            .combine(OpenTelemetryTracing::new(tracer))
-            .combine(OpenTelemetryMetrics::new())
-            .combine(SetCurrentService)
-            .combine_if(
-                std::env::var("GEAR_ENABLE_TOKIO_METRICS").as_deref() == Ok("1"),
-                TokioMetrics::new(),
-            );
-        self.start_with_middleware(middleware).await
+        let grpc_server = Server::new(TcpListener::bind(
+            std::env::var("MICRO_SERVER_ADDRESS").unwrap_or_else(|_| "0.0.0.0:8080".to_string()),
+        ))
+        .http2_max_concurrent_streams(None)
+        .run(app);
+        tokio::try_join!(grpc_server).map(|_| ())
+    }
+
+    /// Start the server
+    pub async fn start(self) -> io::Result<()> {
+        self.start_with_middleware(()).await
     }
 }
