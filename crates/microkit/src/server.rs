@@ -10,7 +10,7 @@ use poem::{
 };
 use poem_grpc::{RouteGrpc, Service};
 
-use crate::middlewares::SetCurrentService;
+use crate::middlewares::{RequestDurationMiddleware, SetCurrentService};
 
 /// GRPC Server
 #[derive(Default)]
@@ -52,6 +52,7 @@ impl GrpcServer {
                 .with(OpenTelemetryTracing::new(tracer))
                 .with(OpenTelemetryMetrics::new())
                 .with(SetCurrentService)
+                .with(RequestDurationMiddleware::new())
                 .with_if(
                     std::env::var("GEAR_ENABLE_TOKIO_METRICS").as_deref() == Ok("1"),
                     TokioMetrics::new(),
