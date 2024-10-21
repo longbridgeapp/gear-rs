@@ -45,9 +45,9 @@ impl<E: Endpoint> Endpoint for RequestDurationEndpoint<E> {
         let method = req.uri().path().to_string();
 
         let caller = req
-            .data::<String>()
-            .cloned()
-            .unwrap_or_else(|| "".to_string());
+            .header("x-micro-from-service")
+            .unwrap_or_default()
+            .to_string();
         let response = self.inner.call(req).await;
         let duration = start.elapsed().as_secs_f64();
         let status = if response.is_ok() { "success" } else { "fail" };
