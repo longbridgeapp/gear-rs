@@ -2,7 +2,7 @@
 
 use poem::{Endpoint, Middleware, Request, Result};
 
-pub(crate) struct SetCurrentService;
+pub struct SetCurrentService;
 
 impl<E: Endpoint> Middleware<E> for SetCurrentService {
     type Output = SetCurrentServiceEndpoint<E>;
@@ -15,7 +15,7 @@ impl<E: Endpoint> Middleware<E> for SetCurrentService {
 #[derive(Debug, Clone)]
 pub(crate) struct CurrentServiceName(pub(crate) String);
 
-pub(crate) struct SetCurrentServiceEndpoint<E> {
+pub struct SetCurrentServiceEndpoint<E> {
     inner: E,
 }
 

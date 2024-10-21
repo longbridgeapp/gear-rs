@@ -1,4 +1,3 @@
-#[doc(hidden)]
 pub mod middlewares;
 
 mod request_ext;

@@ -5,8 +5,8 @@ use opentelemetry_sdk::propagation::TraceContextPropagator;
 use poem::{
     endpoint::BoxEndpoint,
     listener::TcpListener,
-    middleware::{OpenTelemetryMetrics, OpenTelemetryTracing, TokioMetrics},
-    EndpointExt, IntoEndpoint, Response, Server,
+    middleware::{AddData, OpenTelemetryMetrics, OpenTelemetryTracing, TokioMetrics},
+    EndpointExt, IntoEndpoint, Middleware, Response, Server,
 };
 use poem_grpc::{RouteGrpc, Service};
 
@@ -33,31 +33,38 @@ impl GrpcServer {
         self
     }
 
+    /// Start the server with the middleware
+    pub async fn start_with_middleware<T>(self, middleware: T) -> io::Result<()>
+    where
+        T: Middleware<poem::Route> + 'static,
+    {
+        global::set_text_map_propagator(TraceContextPropagator::new());
+
+        let grpc_server = Server::new(TcpListener::bind(
+            std::env::var("MICRO_SERVER_ADDRESS").unwrap_or_else(|_| "0.0.0.0:8080".to_string()),
+        ))
+        .http2_max_concurrent_streams(None)
+        .run(self.router.with(middleware));
+        tokio::try_join!(grpc_server).map(|_| ())
+    }
+
     /// Start the server
     pub async fn start(self) -> io::Result<()> {
-        global::set_text_map_propagator(TraceContextPropagator::new());
         let tracer_provider = opentelemetry_otlp::new_pipeline()
             .tracing()
             .with_exporter(opentelemetry_otlp::new_exporter().tonic())
             .install_batch(opentelemetry_sdk::runtime::Tokio)
             .expect("Trace Pipeline should initialize.");
         let tracer = tracer_provider.tracer("gear-rs");
-        let grpc_server = Server::new(TcpListener::bind(
-            std::env::var("MICRO_SERVER_ADDRESS").unwrap_or_else(|_| "0.0.0.0:8080".to_string()),
-        ))
-        .http2_max_concurrent_streams(None)
-        .run({
-            self.router
-                .data(tracer.clone())
-                .with(OpenTelemetryTracing::new(tracer))
-                .with(OpenTelemetryMetrics::new())
-                .with(SetCurrentService)
-                .with_if(
-                    std::env::var("GEAR_ENABLE_TOKIO_METRICS").as_deref() == Ok("1"),
-                    TokioMetrics::new(),
-                )
-        });
 
-        tokio::try_join!(grpc_server).map(|_| ())
+        let middleware = AddData::new(tracer.clone())
+            .combine(OpenTelemetryTracing::new(tracer))
+            .combine(OpenTelemetryMetrics::new())
+            .combine(SetCurrentService)
+            .combine_if(
+                std::env::var("GEAR_ENABLE_TOKIO_METRICS").as_deref() == Ok("1"),
+                TokioMetrics::new(),
+            );
+        self.start_with_middleware(middleware).await
     }
 }
