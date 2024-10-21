@@ -10,7 +10,7 @@ use poem::{
 };
 use poem_grpc::{RouteGrpc, Service};
 
-use crate::middlewares::SetCurrentService;
+use crate::middlewares::{RequestDurationMiddleware, SetCurrentService};
 
 /// GRPC Server
 #[derive(Default)]
@@ -55,7 +55,8 @@ impl GrpcServer {
                     .combine_if(
                         std::env::var("GEAR_ENABLE_TOKIO_METRICS").as_deref() == Ok("1"),
                         TokioMetrics::new(),
-                    ),
+                    )
+                    .combine(RequestDurationMiddleware::new()),
             )
             .boxed();
         let app = app.with(middleware);
