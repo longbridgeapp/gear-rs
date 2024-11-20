@@ -65,6 +65,7 @@ impl GrpcServer {
             std::env::var("MICRO_SERVER_ADDRESS").unwrap_or_else(|_| "0.0.0.0:8080".to_string()),
         ))
         .http2_max_concurrent_streams(None)
+        .http2_max_header_list_size(16384 * 64)
         .run(app);
         tokio::try_join!(grpc_server).map(|_| ())
     }
